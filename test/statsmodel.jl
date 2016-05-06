@@ -33,12 +33,12 @@ d[:x4] = [17:20;]
 
 f = y ~ x1 * x2
 m = fit(DummyMod, f, d)
-@test model_response(m) == d[:y]
+@test model_response(m) == Array(d[:y])
 
 ## test prediction method
 ## vanilla
 StatsBase.predict(mod::DummyMod) = mod.x * mod.beta
-@test predict(m) == [ ones(size(d,1)) d[:x1] d[:x2] d[:x1].*d[:x2] ] * collect(1:4)
+@test predict(m) == [ ones(size(d,1)) Array(d[:x1]) Array(d[:x2]) Array(d[:x1].*d[:x2]) ] * collect(1:4)
 
 ## new data from matrix
 StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
@@ -46,10 +46,11 @@ mm = ModelMatrix(ModelFrame(f, d))
 @test predict(m, mm.m) == mm.m * collect(1:4)
 
 ## new data from DataFrame (via ModelMatrix)
-@test predict(m, d) == predict(m, mm.m)
+# FIXME: inconsistency in returning NullableArray here, but Array above?
+@test Array(predict(m, d)) == predict(m, mm.m)
 
 d2 = deepcopy(d)
-d2[3, :x1] = NA
+d2[3, :x1] = Nullable()
 @test length(predict(m, d2)) == 4
 
 ## test copying of names from Terms to CoefTable
@@ -60,7 +61,7 @@ ct = coeftable(m)
 @show m
 
 ## with categorical variables
-d[:x1p] = PooledDataArray(d[:x1])
+d[:x1p] = NullableNominalArray(d[:x1])
 f2 = y ~ x1p
 m2 = fit(DummyMod, f2, d)
 
